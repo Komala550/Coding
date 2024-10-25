@@ -1,0 +1,94 @@
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <queue>
+#include <limits>
+
+using namespace std;
+
+struct Node {
+    int val;
+    unordered_map<int, double> hm; // Stores probabilities at specific times
+    Node(int v) : val(v) {}
+};
+
+struct Pair {
+    Node* node;
+    double prob;
+    int time;
+    Pair(Node* n, double p, int t) : node(n), prob(p), time(t) {}
+};
+
+void utils(vector<vector<Pair>>& adj, Node* start, int k) {
+    queue<Pair> q;
+    start->hm[0] = 1.0; // Initial probability of starting at node 1
+    q.push(Pair(start, 1.0, 0));
+
+    while (!q.empty()) {
+        Pair pair = q.front();
+        q.pop();
+        Node* node = pair.node;
+        double prev = node->hm[pair.time];
+
+        // Check if the probability has changed
+        if (pair.prob != prev) continue;
+
+        int time = pair.time + 10;
+        if (time > k) continue;
+
+        for (const Pair& p : adj[node->val]) {
+            Node* u = p.node;
+            double prob = p.prob * prev;
+
+            if (u->hm.count(time)) {
+                u->hm[time] += prob;
+            } else {
+                u->hm[time] = prob;
+            }
+            q.push(Pair(u, u->hm[time], time));
+        }
+    }
+
+    double maxProb = numeric_limits<double>::min();
+    int ansNode = -1;
+
+    for (const auto& [time, prob] : start->hm) {
+        if (time == k && prob > maxProb) {
+            maxProb = prob;
+            ansNode = start->val;
+        }
+    }
+    
+    cout << ansNode << ":" << maxProb << endl;
+}
+
+int main() {
+    int T;
+    cin >> T;
+    for (int j = 0; j < T; j++) {
+        int V, E, K;
+        cin >> V >> E >> K;
+
+        vector<vector<Pair>> adj(V + 1);
+        vector<Node*> nodes(V + 1);
+        
+        for (int i = 1; i <= V; i++) {
+            nodes[i] = new Node(i);
+        }
+
+        for (int i = 0; i < E; i++) {
+            int u, v;
+            double prob;
+            cin >> u >> v >> prob;
+            adj[u].emplace_back(nodes[v], prob, 0);
+        }
+
+        utils(adj, nodes[1], K);
+
+        // Free dynamically allocated nodes
+        for (int i = 1; i <= V; i++) {
+            delete nodes[i];
+        }
+    }
+    return 0;
+}
